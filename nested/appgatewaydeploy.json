@@ -256,46 +256,7 @@
           "enabled": true,
           "firewallMode": "Prevention"
         }
-      },
-      "resources": [
-        {
-          "type": "providers/diagnosticSettings",
-          "name": "Microsoft.Insights/service",
-          "dependsOn": [
-            "[resourceId('Microsoft.Network/applicationGateways', variables('applicationGatewayName'))]"
-          ],
-          "apiVersion": "2016-09-01",
-          "properties": {
-            "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
-            "logs": [
-              {
-                "category": "ApplicationGatewayAccessLog",
-                "enabled": true,
-                "retentionPolicy": {
-                  "days": "[parameters('retentionPolicy')]",
-                  "enabled": true
-                }
-              },
-              {
-                "category": "ApplicationGatewayPerformanceLog",
-                "enabled": true,
-                "retentionPolicy": {
-                  "days": "[parameters('retentionPolicy')]",
-                  "enabled": false
-                }
-              },
-              {
-                "category": "ApplicationGatewayFirewallLog",
-                "enabled": true,
-                "retentionPolicy": {
-                  "days": "[parameters('retentionPolicy')]",
-                  "enabled": false
-                }
-              }
-            ]
-          }
-        }
-      ]
+      }      
     }
   ],
   "outputs": {
