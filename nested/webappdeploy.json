@@ -173,7 +173,7 @@
           "type": "microsoft.insights/components",
           "name": "[parameters('siteName')]",
           "apiVersion": "2014-04-01",
-          "location": "South Central US",
+          "location": "UK SOUTH",
           "tags": {
             "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', parameters('siteName'))]": "Resource"
           },
