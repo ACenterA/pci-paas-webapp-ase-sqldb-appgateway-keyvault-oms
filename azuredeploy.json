@@ -68,7 +68,7 @@
     },
     "customHostName": {
       "type": "string",
-      "defaultValue": "azurelogpci.com",
+      "defaultValue": "azurepcisamples.com",
       "metadata": {
         "description": "Provide the Custom Host Name."
       }
@@ -106,9 +106,9 @@
   },
   "variables": {
     "storageAccountDiagnostics": "[concat('stgdiag', uniquestring(resourceGroup().id))]",
-    "storageAccountPreRelease": "stglogpcipaasreleases",
-    "webContainerName": "pci-paas-web-container",
-    "webPackageName": "ContosoClinic.zip",
+    "storageAccountPreRelease": "pcilogpaasreleases",
+    "webContainerName": "releases",
+    "webPackageName": "ContosoClinic.zip",    
     "publicIpAddressName": "publicIp-AppGateway",
     "aseNsgGroupName": "nsg-ASE",
     "wafNsgGroupName": "nsg-WAF-Gateway",
@@ -123,9 +123,9 @@
     "aseSubnetAddressPrefix": "[concat(variables('aseSubnetBaseAddress'),'.0','/24')]",
     "aseBackendVirtualIp": "[concat(variables('aseSubnetBaseAddress'),'.9')]",
     "aseName": "[concat('ase-PCI-', uniqueString(resourceGroup().id))]",
-    "aseLocation": "UK SOUTH",
+    "aseLocation": "East US",
     "virtualNetworkName": "[substring(concat('vNet-pci-paas-', uniquestring(resourceGroup().id)),0,22)]",
-    "keyVaultName": "[substring(concat('kv-logpci','-',uniquestring(resourceGroup().id)),0,22)]",
+    "keyVaultName": "[substring(concat('kv-pcisamples','-',uniquestring(resourceGroup().id)),0,22)]",
     "ipSslAddressCount": 0,
     "frontEndSize": "Medium",
     "frontEndCount": 2,
@@ -138,13 +138,13 @@
     "skuName": "WAF_Medium",
     "capacity": 1,
     "retentionPolicy": 2,
-    "automationRegion": "UK SOUTH",
-    "omsRegion": "West Europe",
+    "automationRegion": "East US 2",
+    "omsRegion": "East US",
     "sqlFirewallIps": {
       "startIp": "[concat(variables('aseSubnetBaseAddress'), '.1')]",
       "endIp": "[concat(variables('aseSubnetBaseAddress'), '.255')]"
     },
-    "webSiteName": "[concat('webapp', '-pciwebapp')]",
+    "webSiteName": "[concat('webapp', '-pciwebapp')]",    
     "packageURI": "[concat('http://',variables('storageAccountPreRelease'),'.blob.core.windows.net/',variables('webContainerName'),'/',variables('webPackageName'))]",
     "nestedTemplateFolder": "nested",
     "aseTemplateFileName": "asedeploy.json",
@@ -560,7 +560,26 @@
           }
         }
       }
-    },    
+    },
+    {
+      "name": "deploy-DNSZone",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/', variables('nestedTemplateFolder'), '/', variables('dnsTemplateFileName'), parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "newZoneName": { "value": "[variables('NewZoneName')]" },
+          "aseVirtualIP": { "value": "[variables('aseBackendVirtualIp')]" },
+          "tagValues": { "value": "[variables('tagValues')]" }
+        }
+      }
+    },
     {
       "name": "deploy-BastionVM",
       "type": "Microsoft.Resources/deployments",
@@ -578,7 +597,7 @@
         "parameters": {
           "adminUsername": { "value": "[parameters('bastionHostAdministratorUserName')]" },
           "adminPassword": { "value": "[parameters('bastionHostAdministratorPassword')]" },
-          "dnsLabelPrefix": { "value": "[concat('logpci',uniqueString(resourceGroup().id))]" },
+          "dnsLabelPrefix": { "value": "[concat('pcisamples',uniqueString(resourceGroup().id))]" },
           "virtualNetworkName": { "value": "[variables('virtualNetworkName')]" },
           "subnetName": { "value": "[variables('bastionSubnetName')]" },
           "networkSecurityGroupName": { "value": "[variables('bastionNsgGroupName')]" },
@@ -589,8 +608,60 @@
           "keyVaultName": { "value": "[variables('keyVaultName')]" },
           "tagValues": { "value": "[variables('tagValues')]" }
         }
-      }
-    },
+      },      
+    },  
+    {
+       "name": "deploy-WebAppAndPackage",
+       "type": "Microsoft.Resources/deployments",
+       "apiVersion": "2016-02-01",
+       "dependsOn": [
+         "[concat('Microsoft.Resources/deployments', '/' , 'deploy-ASE')]",
+         "[concat('Microsoft.Resources/deployments', '/' , 'deploy-CommonInfrastructure')]",
+         "[concat('Microsoft.Resources/deployments', '/' , 'deploy-SQLServerSQLDb')]"
+       ],
+       "properties": {
+         "mode": "Incremental",
+         "templateLink": {
+           "uri": "[concat(parameters('_artifactsLocation'), '/', variables('nestedTemplateFolder'), '/', variables('webAppTemplateFileName'), parameters('_artifactsLocationSasToken'))]",
+           "contentVersion": "1.0.0.0"
+         },
+         "parameters": {
+           "AadLoginUser": {
+             "value": "[parameters('sqlAdAdminUserName')]"
+           },
+           "AadLoginPassword": {
+             "value": "[parameters('sqlAdAdminUserPassword')]"
+           },
+           "siteName": {
+             "value": "[variables('webSiteName')]"
+           },
+           "location": {
+             "value": "[variables('aseLocation')]"
+           },
+           "ClientId": {
+             "value": "[parameters('azureAdApplicationClientId')]"
+           },
+           "ActiveDirectoryAppSecret": {
+             "value": "[parameters('azureAdApplicationClientSecret')]"
+           },
+           "aseName": {
+             "value": "[variables('aseName')]"
+           },
+           "tagValues": {
+             "value": "[variables('tagValues')]"
+           },
+           "storageAccountDiagnostics": {
+             "value": "[variables('storageAccountDiagnostics')]"
+           },
+           "packageURI": {
+             "value": "[variables('packageURI')]"
+           },
+           "customHostName": {
+             "value": "[parameters('customHostName')]"
+           }
+         }
+        }    
+    },    
     {
       "name": "deploy-SQLServerSQLDb",
       "type": "Microsoft.Resources/deployments",
@@ -628,7 +699,59 @@
           }
         }
       }
-    },    
+    },
+    {
+      "name": "deploy-WebAppAndPackage",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "[concat('Microsoft.Resources/deployments', '/' , 'deploy-ASE')]",
+        "[concat('Microsoft.Resources/deployments', '/' , 'deploy-CommonInfrastructure')]",
+        "[concat('Microsoft.Resources/deployments', '/' , 'deploy-SQLServerSQLDb')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/', variables('nestedTemplateFolder'), '/', variables('webAppTemplateFileName'), parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "AadLoginUser": {
+            "value": "[parameters('sqlAdAdminUserName')]"
+          },
+          "AadLoginPassword": {
+            "value": "[parameters('sqlAdAdminUserPassword')]"
+          },
+          "siteName": {
+            "value": "[variables('webSiteName')]"
+          },
+          "location": {
+            "value": "[variables('aseLocation')]"
+          },
+          "ClientId": {
+            "value": "[parameters('azureAdApplicationClientId')]"
+          },
+          "ActiveDirectoryAppSecret": {
+            "value": "[parameters('azureAdApplicationClientSecret')]"
+          },
+          "aseName": {
+            "value": "[variables('aseName')]"
+          },
+          "tagValues": {
+            "value": "[variables('tagValues')]"
+          },
+          "storageAccountDiagnostics": {
+            "value": "[variables('storageAccountDiagnostics')]"
+          },
+          "packageURI": {
+            "value": "[variables('packageURI')]"
+          },
+          "customHostName": {
+            "value": "[parameters('customHostName')]"
+          }
+        }
+      }
+    },
     {
       "name": "deploy-OMSWorkspaceSolutions",
       "type": "Microsoft.Resources/deployments",
