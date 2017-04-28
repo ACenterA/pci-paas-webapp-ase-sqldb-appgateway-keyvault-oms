@@ -138,7 +138,7 @@
     "skuName": "WAF_Medium",
     "capacity": 1,
     "retentionPolicy": 2,
-    "automationRegion": "UK SOUTH",
+    "automationRegion": "West Europe",
     "omsRegion": "West Europe",
     "sqlFirewallIps": {
       "startIp": "[concat(variables('aseSubnetBaseAddress'), '.1')]",
